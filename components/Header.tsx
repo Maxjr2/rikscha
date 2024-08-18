@@ -5,41 +5,44 @@ const Header: React.FC = () => {
   const { data: session } = useSession()
 
   return (
-    <header className="bg-blue-700 text-white p-4" role="banner">
+    <header className="bg-federal-blue text-white p-4" role="banner">
       <nav className="container mx-auto flex justify-between items-center" aria-label="Main navigation">
         <Link href="/" className="text-xl font-bold">
           <span className="sr-only">Booking Platform</span>
           <img src="/logo.png" alt="Booking Platform Logo" className="h-8" />
         </Link>
         <div>
+          <Link href="/book/book" className="btn btn-primary bg-slate-700 mr-4">
+            Book Now
+          </Link>
           {session ? (
             <>
               {session.user.role === 'CLIENT' && (
-                <Link href="/client/dashboard" className="mr-4 px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-white">
+                <Link href="/client/dashboard" className="btn btn-primary bg-slate-700 mr-4">
                   Client Dashboard
                 </Link>
               )}
               {session.user.role === 'DRIVER' && (
-                <Link href="/driver/dashboard" className="mr-4 px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-white">
+                <Link href="/driver/dashboard" className="btn btn-primary bg-slate-700 mr-4">
                   Driver Dashboard
                 </Link>
               )}
-              <Link href="/user/profile" className="mr-4 px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-white">
+              <Link href="/user/profile" className="btn btn-primary bg-slate-700 mr-4">
                 Profile
               </Link>
-              <button 
-                onClick={() => signOut()} 
-                className="px-3 py-2 rounded bg-red-600 hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-white"
+              <button
+                onClick={() => signOut()}
+                className="btn btn-danger"
               >
                 Sign out
               </button>
             </>
           ) : (
             <>
-              <Link href="/user/login" className="mr-4 px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-white">
+              <Link href="/user/login" className="btn btn-primary mr-4 bg-slate-700">
                 Login
               </Link>
-              <Link href="/user/register" className="px-3 py-2 rounded bg-green-600 hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-white">
+              <Link href="/user/register" className="btn btn-primary">
                 Register
               </Link>
             </>
