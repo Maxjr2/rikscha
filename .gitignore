@@ -1,5 +1,11 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+#misc for ai
+/.storybook
+/.vscode
+/stories
+/.github
+
 # dependencies
 /node_modules
 /.pnp
@@ -12,6 +18,7 @@
 # prisma db
 /prisma/dev.db
 /prisma/migrations
+/prisma/dev.de-journal
 
 # next.js
 /.next/
@@ -41,3 +48,5 @@ next-env.d.ts
 
 # stryker temp files
 .stryker-tmp
+
+*storybook.log
