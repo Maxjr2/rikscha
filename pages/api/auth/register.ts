@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { PrismaClient } from '@prisma/client'
 import { hash } from 'bcryptjs'
+import { ErrorHandler } from '../../../lib/errorHandler'
 
 const prisma = new PrismaClient()
 
@@ -16,7 +17,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: 'Missing required fields' })
     }
 
-    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: email }
     })
@@ -25,10 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(422).json({ message: 'User already exists' })
     }
 
-    // Hash the password
     const hashedPassword = await hash(password, 12)
 
-    // Create the user
     const user = await prisma.user.create({
       data: {
         name,
@@ -38,14 +36,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     })
 
-    res.status(201).json({ message: 'User created successfully', user: { id: user.id, name: user.name, email: user.email, role: user.role } })
+    res.status(201).json({
+      message: 'User created successfully',
+      user: { id: user.id, name: user.name, email: user.email, role: user.role }
+    })
   } catch (error) {
-    console.error('Registration error:', error)
-    if (error instanceof Error) {
-      res.status(500).json({ message: 'Something went wrong', error: error.message })
-    } else {
-      res.status(500).json({ message: 'An unknown error occurred' })
-    }
+    ErrorHandler.handle(error, res)
   } finally {
     await prisma.$disconnect()
   }

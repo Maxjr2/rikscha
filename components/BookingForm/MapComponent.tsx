@@ -13,12 +13,12 @@ interface MapComponentProps {
   pickupLocation: Location | null;
   dropoffLocation: Location | null;
   onLocationSelect: (locationType: 'pickup' | 'dropoff', location: Location) => void;
+  activeMarker: 'pickup' | 'dropoff';
 }
 
-const MapComponent: React.FC<MapComponentProps> = ({ pickupLocation, dropoffLocation, onLocationSelect }) => {
+const MapComponent: React.FC<MapComponentProps> = ({ pickupLocation, dropoffLocation, onLocationSelect, activeMarker }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
-  const [activeMarker, setActiveMarker] = useState<'pickup' | 'dropoff'>('pickup');
   const pickupMarker = useRef<maplibregl.Marker | null>(null);
   const dropoffMarker = useRef<maplibregl.Marker | null>(null);
 
@@ -77,8 +77,6 @@ const MapComponent: React.FC<MapComponentProps> = ({ pickupLocation, dropoffLoca
         address: e.result.place_name,
         coordinates: e.result.center as [number, number]
       });
-      // Toggle the active marker after selection
-      setActiveMarker(activeMarker === 'pickup' ? 'dropoff' : 'pickup');
     });
 
     map.current.on('click', (e) => {
@@ -90,8 +88,6 @@ const MapComponent: React.FC<MapComponentProps> = ({ pickupLocation, dropoffLoca
             address: data.display_name,
             coordinates: [lng, lat]
           });
-          // Toggle the active marker after selection
-          setActiveMarker(activeMarker === 'pickup' ? 'dropoff' : 'pickup');
         });
     });
 
@@ -175,7 +171,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ pickupLocation, dropoffLoca
     <div>
       <div ref={mapContainer} className="w-full h-[500px]" />
       <div className="mt-4 text-center text-federal-blue">
-        <p>Click on the map to set {activeMarker === 'pickup' ? 'pickup' : 'dropoff'} location</p>
+        <p>Click on the map to set {activeMarker} location</p>
       </div>
     </div>
   );

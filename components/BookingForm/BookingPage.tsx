@@ -52,6 +52,7 @@ const BookingPage: React.FC = () => {
               dropoffLocation={dropoffLocation}
               onLocationSelect={handleLocationSelect}
               activeMarker={activeMarker}
+              setActiveMarker={setActiveMarker}
             />
           </div>
           <div className="w-full md:w-2/3">

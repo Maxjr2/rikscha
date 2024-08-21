@@ -14,6 +14,7 @@ interface BookingFormProps {
   dropoffLocation: Location | null;
   onLocationSelect: (locationType: 'pickup' | 'dropoff', location: Location) => void;
   activeMarker: 'pickup' | 'dropoff';
+  setActiveMarker: (marker: 'pickup' | 'dropoff') => void;
 }
 
 type BookingFormData = {
@@ -28,7 +29,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
   pickupLocation, 
   dropoffLocation, 
   onLocationSelect,
-  activeMarker
+  activeMarker,
+  setActiveMarker
 }) => {
   const { register, control, handleSubmit, setValue, formState: { errors } } = useForm<BookingFormData>();
 
@@ -46,32 +48,44 @@ const BookingForm: React.FC<BookingFormProps> = ({
     console.log('Booking submitted:', { ...data, userId });
   };
 
+  const handleInputFocus = (locationType: 'pickup' | 'dropoff') => {
+    setActiveMarker(locationType);
+  };
+
+  const handleInputChange = (locationType: 'pickup' | 'dropoff', value: string) => {
+    // This function would typically involve geocoding the input to get coordinates
+    // For now, we'll just update the form value
+    setValue(locationType === 'pickup' ? 'pickupLocation' : 'dropoffLocation', value);
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <label htmlFor="pickupLocation" className="block text-sm font-medium text-federal-blue">
-          Pickup Location {activeMarker === 'pickup' && '(Click on map to set)'}
+          Pickup Location
         </label>
         <input
           id="pickupLocation"
           {...register('pickupLocation', { required: 'Pickup location is required' })}
-          className="form-input mt-1"
-          placeholder="Search or click on map"
-          readOnly
+          className={`form-input mt-1 ${activeMarker === 'pickup' ? 'ring-2 ring-forest-green' : ''}`}
+          placeholder="Enter pickup location"
+          onFocus={() => handleInputFocus('pickup')}
+          onChange={(e) => handleInputChange('pickup', e.target.value)}
         />
         {errors.pickupLocation && <p className="mt-1 text-imperial-red">{errors.pickupLocation.message}</p>}
       </div>
 
       <div>
         <label htmlFor="dropoffLocation" className="block text-sm font-medium text-federal-blue">
-          Dropoff Location {activeMarker === 'dropoff' && '(Click on map to set)'}
+          Dropoff Location
         </label>
         <input
           id="dropoffLocation"
           {...register('dropoffLocation', { required: 'Dropoff location is required' })}
-          className="form-input mt-1"
-          placeholder="Search or click on map"
-          readOnly
+          className={`form-input mt-1 ${activeMarker === 'dropoff' ? 'ring-2 ring-forest-green' : ''}`}
+          placeholder="Enter dropoff location"
+          onFocus={() => handleInputFocus('dropoff')}
+          onChange={(e) => handleInputChange('dropoff', e.target.value)}
         />
         {errors.dropoffLocation && <p className="mt-1 text-imperial-red">{errors.dropoffLocation.message}</p>}
       </div>
@@ -89,7 +103,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
               id="date"
               selected={field.value}
               onChange={(date: Date) => field.onChange(date)}
-              className="form-input mt-1"
+              className="form-input mt-1 w-full"
               placeholderText="Select date"
             />
           )}
