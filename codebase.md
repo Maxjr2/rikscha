@@ -238,6 +238,12 @@ const nextConfig = {
 ```
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+#misc for ai
+/.storybook
+/.vscode
+/stories
+/.github
+
 # dependencies
 /node_modules
 /.pnp
@@ -250,6 +256,7 @@ const nextConfig = {
 # prisma db
 /prisma/dev.db
 /prisma/migrations
+/prisma/dev.de-journal
 
 # next.js
 /.next/
@@ -281,6 +288,7 @@ next-env.d.ts
 .stryker-tmp
 
 *storybook.log
+
 ```
 
 # .eslintrc.json
@@ -2985,25 +2993,6 @@ jobs:
 
 ```
 
-# prisma/migrations/20240817133409_no/migration.sql
-
-```sql
--- CreateTable
-CREATE TABLE "User" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-    "role" TEXT NOT NULL DEFAULT 'CLIENT',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
-);
-
--- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
-
-```
-
 # prisma/migrations/20240817212408_add_booking_model/migration.sql
 
 ```sql
@@ -3091,6 +3080,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await prisma.$disconnect()
   }
 }
+```
+
+# prisma/migrations/20240817133409_no/migration.sql
+
+```sql
+-- CreateTable
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "role" TEXT NOT NULL DEFAULT 'CLIENT',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
 ```
 
 # pages/api/bookings/bookings.ts
