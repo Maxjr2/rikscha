@@ -1404,10 +1404,6 @@ model Booking {
 }
 ```
 
-# prisma/dev.db-journal
-
-This is a binary file of the type: Binary
-
 # prisma/dev.db
 
 This is a binary file of the type: Binary
@@ -1480,6 +1476,29 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 export default prisma
+```
+
+# lib/errorHandler.ts
+
+```ts
+import { NextApiResponse } from 'next'
+import { Prisma } from '@prisma/client'
+
+export class ErrorHandler {
+  static handle(error: unknown, res: NextApiResponse) {
+    console.error('API Error:', error)
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return res.status(400).json({ message: 'Database error', error: error.message })
+    }
+
+    if (error instanceof Error) {
+      return res.status(500).json({ message: 'Internal server error', error: error.message })
+    }
+
+    return res.status(500).json({ message: 'An unknown error occurred' })
+  }
+}
 ```
 
 # components/Layout.tsx
@@ -2449,6 +2468,12 @@ export default ClientDashboard;
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import BookingPage from '../../components/BookingForm/BookingPage';
+import dynamic from 'next/dynamic';
+
+const DynamicMap = dynamic(() => import('../../components/BookingForm/MapComponent'), {
+  loading: () => <p>Loading map...</p>,
+  ssr: false, // Disable server-side rendering for map component
+})
 
 const BookRoute: React.FC = () => {
   const { data: session, status } = useSession();
@@ -2517,12 +2542,12 @@ interface MapComponentProps {
   pickupLocation: Location | null;
   dropoffLocation: Location | null;
   onLocationSelect: (locationType: 'pickup' | 'dropoff', location: Location) => void;
+  activeMarker: 'pickup' | 'dropoff';
 }
 
-const MapComponent: React.FC<MapComponentProps> = ({ pickupLocation, dropoffLocation, onLocationSelect }) => {
+const MapComponent: React.FC<MapComponentProps> = ({ pickupLocation, dropoffLocation, onLocationSelect, activeMarker }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
-  const [activeMarker, setActiveMarker] = useState<'pickup' | 'dropoff'>('pickup');
   const pickupMarker = useRef<maplibregl.Marker | null>(null);
   const dropoffMarker = useRef<maplibregl.Marker | null>(null);
 
@@ -2581,8 +2606,6 @@ const MapComponent: React.FC<MapComponentProps> = ({ pickupLocation, dropoffLoca
         address: e.result.place_name,
         coordinates: e.result.center as [number, number]
       });
-      // Toggle the active marker after selection
-      setActiveMarker(activeMarker === 'pickup' ? 'dropoff' : 'pickup');
     });
 
     map.current.on('click', (e) => {
@@ -2594,8 +2617,6 @@ const MapComponent: React.FC<MapComponentProps> = ({ pickupLocation, dropoffLoca
             address: data.display_name,
             coordinates: [lng, lat]
           });
-          // Toggle the active marker after selection
-          setActiveMarker(activeMarker === 'pickup' ? 'dropoff' : 'pickup');
         });
     });
 
@@ -2679,7 +2700,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ pickupLocation, dropoffLoca
     <div>
       <div ref={mapContainer} className="w-full h-[500px]" />
       <div className="mt-4 text-center text-federal-blue">
-        <p>Click on the map to set {activeMarker === 'pickup' ? 'pickup' : 'dropoff'} location</p>
+        <p>Click on the map to set {activeMarker} location</p>
       </div>
     </div>
   );
@@ -2745,6 +2766,7 @@ const BookingPage: React.FC = () => {
               dropoffLocation={dropoffLocation}
               onLocationSelect={handleLocationSelect}
               activeMarker={activeMarker}
+              setActiveMarker={setActiveMarker}
             />
           </div>
           <div className="w-full md:w-2/3">
@@ -2783,6 +2805,7 @@ interface BookingFormProps {
   dropoffLocation: Location | null;
   onLocationSelect: (locationType: 'pickup' | 'dropoff', location: Location) => void;
   activeMarker: 'pickup' | 'dropoff';
+  setActiveMarker: (marker: 'pickup' | 'dropoff') => void;
 }
 
 type BookingFormData = {
@@ -2797,7 +2820,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
   pickupLocation, 
   dropoffLocation, 
   onLocationSelect,
-  activeMarker
+  activeMarker,
+  setActiveMarker
 }) => {
   const { register, control, handleSubmit, setValue, formState: { errors } } = useForm<BookingFormData>();
 
@@ -2815,32 +2839,44 @@ const BookingForm: React.FC<BookingFormProps> = ({
     console.log('Booking submitted:', { ...data, userId });
   };
 
+  const handleInputFocus = (locationType: 'pickup' | 'dropoff') => {
+    setActiveMarker(locationType);
+  };
+
+  const handleInputChange = (locationType: 'pickup' | 'dropoff', value: string) => {
+    // This function would typically involve geocoding the input to get coordinates
+    // For now, we'll just update the form value
+    setValue(locationType === 'pickup' ? 'pickupLocation' : 'dropoffLocation', value);
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <label htmlFor="pickupLocation" className="block text-sm font-medium text-federal-blue">
-          Pickup Location {activeMarker === 'pickup' && '(Click on map to set)'}
+          Pickup Location
         </label>
         <input
           id="pickupLocation"
           {...register('pickupLocation', { required: 'Pickup location is required' })}
-          className="form-input mt-1"
-          placeholder="Search or click on map"
-          readOnly
+          className={`form-input mt-1 ${activeMarker === 'pickup' ? 'ring-2 ring-forest-green' : ''}`}
+          placeholder="Enter pickup location"
+          onFocus={() => handleInputFocus('pickup')}
+          onChange={(e) => handleInputChange('pickup', e.target.value)}
         />
         {errors.pickupLocation && <p className="mt-1 text-imperial-red">{errors.pickupLocation.message}</p>}
       </div>
 
       <div>
         <label htmlFor="dropoffLocation" className="block text-sm font-medium text-federal-blue">
-          Dropoff Location {activeMarker === 'dropoff' && '(Click on map to set)'}
+          Dropoff Location
         </label>
         <input
           id="dropoffLocation"
           {...register('dropoffLocation', { required: 'Dropoff location is required' })}
-          className="form-input mt-1"
-          placeholder="Search or click on map"
-          readOnly
+          className={`form-input mt-1 ${activeMarker === 'dropoff' ? 'ring-2 ring-forest-green' : ''}`}
+          placeholder="Enter dropoff location"
+          onFocus={() => handleInputFocus('dropoff')}
+          onChange={(e) => handleInputChange('dropoff', e.target.value)}
         />
         {errors.dropoffLocation && <p className="mt-1 text-imperial-red">{errors.dropoffLocation.message}</p>}
       </div>
@@ -2858,7 +2894,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
               id="date"
               selected={field.value}
               onChange={(date: Date) => field.onChange(date)}
-              className="form-input mt-1"
+              className="form-input mt-1 w-full"
               placeholderText="Select date"
             />
           )}
@@ -3012,76 +3048,6 @@ CREATE TABLE "Booking" (
 
 ```
 
-# pages/api/user/update-profile.ts
-
-```ts
-import { NextApiRequest, NextApiResponse } from 'next'
-import { getSession } from 'next-auth/react'
-import prisma from '../../../lib/prisma'
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' })
-  }
-
-  const session = await getSession({ req })
-
-  if (!session) {
-    return res.status(401).json({ message: 'Unauthorized' })
-  }
-
-  const { name, email } = req.body
-
-  try {
-    const updatedUser = await prisma.user.update({
-      where: { email: session.user.email },
-      data: { name, email },
-    })
-
-    res.status(200).json(updatedUser)
-  } catch (error) {
-    console.error('Profile update error:', error)
-    res.status(500).json({ message: 'Failed to update profile' })
-  }
-}
-```
-
-# pages/api/user/me.ts
-
-```ts
-import { NextApiRequest, NextApiResponse } from 'next'
-import { getSession } from 'next-auth/react'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession({ req })
-
-  if (!session) {
-    return res.status(401).json({ message: 'Unauthorized' })
-  }
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true, name: true, email: true, role: true }
-    })
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' })
-    }
-
-    res.status(200).json(user)
-  } catch (error) {
-    console.error('Error fetching user data:', error)
-    res.status(500).json({ message: 'Internal server error' })
-  } finally {
-    await prisma.$disconnect()
-  }
-}
-```
-
 # prisma/migrations/20240817133409_no/migration.sql
 
 ```sql
@@ -3099,6 +3065,146 @@ CREATE TABLE "User" (
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
+```
+
+# pages/api/user/update-profile.ts
+
+```ts
+import { NextApiRequest, NextApiResponse } from 'next'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '../auth/[...nextauth]'
+import prisma from '../../../lib/prisma'
+import { ErrorHandler } from '../../../lib/errorHandler'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'PUT') {
+    return res.status(405).json({ message: 'Method not allowed' })
+  }
+
+  try {
+    const session = await getServerSession(req, res, authOptions)
+
+    if (!session) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+
+    const { name, email } = req.body
+
+    if (!name || !email) {
+      return res.status(400).json({ message: 'Missing required fields' })
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: session.user.id },
+      data: { name, email },
+      select: { id: true, name: true, email: true, role: true }
+    })
+
+    res.status(200).json({ message: 'Profile updated successfully', user: updatedUser })
+  } catch (error) {
+    ErrorHandler.handle(error, res)
+  }
+}
+
+```
+
+# pages/api/user/me.ts
+
+```ts
+import { NextApiRequest, NextApiResponse } from 'next'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '../auth/[...nextauth]'
+import prisma from '../../../lib/prisma'
+import { ErrorHandler } from '../../../lib/errorHandler'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' })
+  }
+
+  try {
+    const session = await getServerSession(req, res, authOptions)
+
+    if (!session) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, name: true, email: true, role: true }
+    })
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    res.status(200).json(user)
+  } catch (error) {
+    ErrorHandler.handle(error, res)
+  }
+}
+```
+
+# pages/api/bookings/index.ts
+
+```ts
+import { NextApiRequest, NextApiResponse } from 'next'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '../auth/[...nextauth]'
+import prisma from '../../../lib/prisma'
+import { ErrorHandler } from '../../../lib/errorHandler'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const session = await getServerSession(req, res, authOptions)
+
+    if (!session) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+
+    switch (req.method) {
+      case 'POST':
+        return await createBooking(req, res, session.user.id)
+      case 'GET':
+        return await getBookings(req, res, session.user.id)
+      default:
+        res.setHeader('Allow', ['POST', 'GET'])
+        return res.status(405).json({ message: `Method ${req.method} Not Allowed` })
+    }
+  } catch (error) {
+    ErrorHandler.handle(error, res)
+  }
+}
+
+async function createBooking(req: NextApiRequest, res: NextApiResponse, userId: string) {
+  const { pickupLocation, dropoffLocation, date, time, passengers } = req.body
+
+  if (!pickupLocation || !dropoffLocation || !date || !time || !passengers) {
+    return res.status(400).json({ message: 'Missing required fields' })
+  }
+
+  const booking = await prisma.booking.create({
+    data: {
+      pickupLocation,
+      dropoffLocation,
+      date: new Date(date),
+      time,
+      passengers: parseInt(passengers),
+      userId,
+    },
+  })
+
+  res.status(201).json({ message: 'Booking created successfully', booking })
+}
+
+async function getBookings(req: NextApiRequest, res: NextApiResponse, userId: string) {
+  const bookings = await prisma.booking.findMany({
+    where: { userId },
+    orderBy: { date: 'desc' },
+  })
+
+  res.status(200).json(bookings)
+}
 ```
 
 # pages/api/bookings/bookings.ts
@@ -3146,6 +3252,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 import { NextApiRequest, NextApiResponse } from 'next'
 import { PrismaClient } from '@prisma/client'
 import { hash } from 'bcryptjs'
+import { ErrorHandler } from '../../../lib/errorHandler'
 
 const prisma = new PrismaClient()
 
@@ -3161,7 +3268,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: 'Missing required fields' })
     }
 
-    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: email }
     })
@@ -3170,10 +3276,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(422).json({ message: 'User already exists' })
     }
 
-    // Hash the password
     const hashedPassword = await hash(password, 12)
 
-    // Create the user
     const user = await prisma.user.create({
       data: {
         name,
@@ -3183,14 +3287,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     })
 
-    res.status(201).json({ message: 'User created successfully', user: { id: user.id, name: user.name, email: user.email, role: user.role } })
+    res.status(201).json({
+      message: 'User created successfully',
+      user: { id: user.id, name: user.name, email: user.email, role: user.role }
+    })
   } catch (error) {
-    console.error('Registration error:', error)
-    if (error instanceof Error) {
-      res.status(500).json({ message: 'Something went wrong', error: error.message })
-    } else {
-      res.status(500).json({ message: 'An unknown error occurred' })
-    }
+    ErrorHandler.handle(error, res)
   } finally {
     await prisma.$disconnect()
   }
@@ -3200,15 +3302,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 # pages/api/auth/[...nextauth].ts
 
 ```ts
-import NextAuth from "next-auth"
+import NextAuth, { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { PrismaClient } from "@prisma/client"
 import { compare } from "bcryptjs"
+import { ErrorHandler } from "../../../lib/errorHandler"
 
 const prisma = new PrismaClient()
 
-export default NextAuth({
+export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
@@ -3220,7 +3323,7 @@ export default NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null
+          throw new Error("Missing email or password")
         }
 
         const user = await prisma.user.findUnique({
@@ -3228,13 +3331,13 @@ export default NextAuth({
         })
 
         if (!user) {
-            throw new Error("User not found")
+          throw new Error("User not found")
         }
 
         const isPasswordValid = await compare(credentials.password, user.password)
 
         if (!isPasswordValid) {
-            throw new Error("Invalid password")
+          throw new Error("Invalid password")
         }
 
         return {
@@ -3268,7 +3371,8 @@ export default NextAuth({
   session: {
     strategy: "jwt"
   },
-  // ... other configurations
-})
+}
+
+export default NextAuth(authOptions)
 ```
 

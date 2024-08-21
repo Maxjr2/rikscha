@@ -102,7 +102,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             <DatePicker
               id="date"
               selected={field.value}
-              onChange={(date: Date) => field.onChange(date)}
+              onChange={(date: Date | null) => field.onChange(date)}
               className="form-input mt-1 w-full"
               placeholderText="Select date"
             />
